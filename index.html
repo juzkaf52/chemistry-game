@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explosive Chemistry - Interactive Learning Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Nunito:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .game-title {
+            font-family: 'Fredoka One', cursive;
+            text-shadow: 3px 3px 0px #ff6b6b;
+        }
+        
+        .element-tile {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 3px solid transparent;
+        }
+        
+        .element-tile:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+        
+        .element-selected {
+            border-color: #ffd700 !important;
+            box-shadow: 0 0 25px #ffd700;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes explosion {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+            100% { transform: scale(2) rotate(360deg); opacity: 0; }
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .explosion-animation {
+            animation: explosion 1s ease-out;
+        }
+        
+        .sparkle {
+            animation: sparkle 0.8s ease-in-out infinite;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .reaction-card {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border: 4px solid #ff6b6b;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .badge {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            border: 2px solid #ff6b6b;
+        }
+        
+        .welcome-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 4px solid #ffd700;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="min-h-screen flex items-center justify-center">
+        <div class="welcome-card rounded-3xl p-8 max-w-md mx-4 text-center fade-in">
+            <div class="text-8xl mb-6">🧪</div>
+            <h1 class="game-title text-4xl text-white mb-4">EXPLOSIVE CHEMISTRY</h1>
+            <p class="text-xl text-white mb-6">Welcome to the most exciting chemistry adventure!</p>
+            
+            <div class="mb-6">
+                <label class="block text-white font-bold mb-2" for="student-name">What's your name, future scientist?</label>
+                <input type="text" id="student-name" class="w-full px-4 py-3 rounded-full text-center text-lg font-bold text-purple-800 border-4 border-yellow-400 focus:outline-none focus:border-pink-400" placeholder="Enter your name here!" maxlength="20">
+            </div>
+            
+            <button id="start-game-btn" class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                🚀 START MY CHEMISTRY ADVENTURE! 🎯
+            </button>
+            
+            <div class="mt-6 text-white/80 text-sm">
+                <p>🎮 Click elements to create reactions</p>
+                <p>🏆 Earn points and unlock badges</p>
+                <p>🧠 Learn real chemistry facts</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="game-title text-5xl text-white mb-2" id="game-title">🧪 EXPLOSIVE CHEMISTRY 💥</h1>
+            <p class="text-xl text-white font-semibold">Click elements to create amazing reactions!</p>
+            
+            <!-- Score and Progress -->
+            <div class="flex justify-center items-center gap-6 mt-4">
+                <div class="badge px-4 py-2 rounded-full">
+                    <span class="font-bold text-purple-800">⭐ Score: <span id="score">0</span></span>
+                </div>
+                <div class="badge px-4 py-2 rounded-full">
+                    <span class="font-bold text-purple-800">🏆 Reactions: <span id="reactions-count">0</span>/15</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Display -->
+        <div class="text-center mb-6">
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-4xl mx-auto">
+                <div class="mb-4">
+                    <span class="bg-yellow-400 text-purple-800 px-3 py-1 rounded-full font-bold text-sm">Question <span id="question-number">1</span>/15</span>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-4" id="current-question">
+                    What two elements combine to form water?
+                </h2>
+                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 inline-block">
+                    <p class="text-white font-semibold mb-2">Your Answer:</p>
+                    <div id="selected-display" class="text-2xl text-yellow-300 font-bold min-h-[30px]">
+                        Select elements to answer!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Periodic Table (Expanded) -->
+        <div class="max-w-7xl mx-auto mb-6">
+            <div class="grid grid-cols-9 md:grid-cols-18 gap-1" id="periodic-table">
+                <!-- Row 1 -->
+                <div class="element-tile bg-red-400 text-white p-2 rounded-lg text-center" data-element="H" data-name="Hydrogen" data-number="1">
+                    <div class="text-xs">1</div>
+                    <div class="text-sm font-bold">H</div>
+                    <div class="text-xs">1.008</div>
+                </div>
+                <div class="col-span-7 md:col-span-16"></div>
+                <div class="element-tile bg-pink-400 text-white p-2 rounded-lg text-center" data-element="He" data-name="Helium" data-number="2">
+                    <div class="text-xs">2</div>
+                    <div class="text-sm font-bold">He</div>
+                    <div class="text-xs">4.003</div>
+                </div>
+                
+                <!-- Row 2 -->
+                <div class="element-tile bg-orange-400 text-white p-2 rounded-lg text-center" data-element="Li" data-name="Lithium" data-number="3">
+                    <div class="text-xs">3</div>
+                    <div class="text-sm font-bold">Li</div>
+                    <div class="text-xs">6.941</div>
+                </div>
+                <div class="element-tile bg-yellow-400 text-black p-2 rounded-lg text-center" data-element="Be" data-name="Beryllium" data-number="4">
+                    <div class="text-xs">4</div>
+                    <div class="text-sm font-bold">Be</div>
+                    <div class="text-xs">9.012</div>
+                </div>
+                <div class="col-span-5 md:col-span-10"></div>
+                <div class="element-tile bg-green-400 text-white p-2 rounded-lg text-center" data-element="B" data-name="Boron" data-number="5">
+                    <div class="text-xs">5</div>
+                    <div class="text-sm font-bold">B</div>
+                    <div class="text-xs">10.811</div>
+                </div>
+                <div class="element-tile bg-gray-600 text-white p-2 rounded-lg text-center" data-element="C" data-name="Carbon" data-number="6">
+                    <div class="text-xs">6</div>
+                    <div class="text-sm font-bold">C</div>
+                    <div class="text-xs">12.011</div>
+                </div>
+                <div class="element-tile bg-blue-400 text-white p-2 rounded-lg text-center" data-element="N" data-name="Nitrogen" data-number="7">
+                    <div class="text-xs">7</div>
+                    <div class="text-sm font-bold">N</div>
+                    <div class="text-xs">14.007</div>
+                </div>
+                <div class="element-tile bg-red-500 text-white p-2 rounded-lg text-center" data-element="O" data-name="Oxygen" data-number="8">
+                    <div class="text-xs">8</div>
+                    <div class="text-sm font-bold">O</div>
+                    <div class="text-xs">15.999</div>
+                </div>
+                <div class="element-tile bg-green-500 text-white p-2 rounded-lg text-center" data-element="F" data-name="Fluorine" data-number="9">
+                    <div class="text-xs">9</div>
+                    <div class="text-sm font-bold">F</div>
+                    <div class="text-xs">18.998</div>
+                </div>
+                <div class="element-tile bg-purple-300 text-white p-2 rounded-lg text-center" data-element="Ne" data-name="Neon" data-number="10">
+                    <div class="text-xs">10</div>
+                    <div class="text-sm font-bold">Ne</div>
+                    <div class="text-xs">20.180</div>
+                </div>
+                
+                <!-- Row 3 -->
+                <div class="element-tile bg-purple-400 text-white p-2 rounded-lg text-center" data-element="Na" data-name="Sodium" data-number="11">
+                    <div class="text-xs">11</div>
+                    <div class="text-sm font-bold">Na</div>
+                    <div class="text-xs">22.990</div>
+                </div>
+                <div class="element-tile bg-indigo-400 text-white p-2 rounded-lg text-center" data-element="Mg" data-name="Magnesium" data-number="12">
+                    <div class="text-xs">12</div>
+                    <div class="text-sm font-bold">Mg</div>
+                    <div class="text-xs">24.305</div>
+                </div>
+                <div class="col-span-5 md:col-span-10"></div>
+                <div class="element-tile bg-slate-400 text-white p-2 rounded-lg text-center" data-element="Al" data-name="Aluminum" data-number="13">
+                    <div class="text-xs">13</div>
+                    <div class="text-sm font-bold">Al</div>
+                    <div class="text-xs">26.982</div>
+                </div>
+                <div class="element-tile bg-amber-400 text-white p-2 rounded-lg text-center" data-element="Si" data-name="Silicon" data-number="14">
+                    <div class="text-xs">14</div>
+                    <div class="text-sm font-bold">Si</div>
+                    <div class="text-xs">28.085</div>
+                </div>
+                <div class="element-tile bg-orange-500 text-white p-2 rounded-lg text-center" data-element="P" data-name="Phosphorus" data-number="15">
+                    <div class="text-xs">15</div>
+                    <div class="text-sm font-bold">P</div>
+                    <div class="text-xs">30.974</div>
+                </div>
+                <div class="element-tile bg-yellow-500 text-white p-2 rounded-lg text-center" data-element="S" data-name="Sulfur" data-number="16">
+                    <div class="text-xs">16</div>
+                    <div class="text-sm font-bold">S</div>
+                    <div class="text-xs">32.066</div>
+                </div>
+                <div class="element-tile bg-lime-400 text-black p-2 rounded-lg text-center" data-element="Cl" data-name="Chlorine" data-number="17">
+                    <div class="text-xs">17</div>
+                    <div class="text-sm font-bold">Cl</div>
+                    <div class="text-xs">35.453</div>
+                </div>
+                <div class="element-tile bg-cyan-300 text-white p-2 rounded-lg text-center" data-element="Ar" data-name="Argon" data-number="18">
+                    <div class="text-xs">18</div>
+                    <div class="text-sm font-bold">Ar</div>
+                    <div class="text-xs">39.948</div>
+                </div>
+                
+                <!-- Row 4 -->
+                <div class="element-tile bg-teal-400 text-white p-2 rounded-lg text-center" data-element="K" data-name="Potassium" data-number="19">
+                    <div class="text-xs">19</div>
+                    <div class="text-sm font-bold">K</div>
+                    <div class="text-xs">39.098</div>
+                </div>
+                <div class="element-tile bg-cyan-400 text-white p-2 rounded-lg text-center" data-element="Ca" data-name="Calcium" data-number="20">
+                    <div class="text-xs">20</div>
+                    <div class="text-sm font-bold">Ca</div>
+                    <div class="text-xs">40.078</div>
+                </div>
+                <div class="element-tile bg-gray-500 text-white p-2 rounded-lg text-center" data-element="Sc" data-name="Scandium" data-number="21">
+                    <div class="text-xs">21</div>
+                    <div class="text-sm font-bold">Sc</div>
+                    <div class="text-xs">44.956</div>
+                </div>
+                <div class="element-tile bg-slate-500 text-white p-2 rounded-lg text-center" data-element="Ti" data-name="Titanium" data-number="22">
+                    <div class="text-xs">22</div>
+                    <div class="text-sm font-bold">Ti</div>
+                    <div class="text-xs">47.867</div>
+                </div>
+                <div class="element-tile bg-zinc-500 text-white p-2 rounded-lg text-center" data-element="V" data-name="Vanadium" data-number="23">
+                    <div class="text-xs">23</div>
+                    <div class="text-sm font-bold">V</div>
+                    <div class="text-xs">50.942</div>
+                </div>
+                <div class="element-tile bg-stone-500 text-white p-2 rounded-lg text-center" data-element="Cr" data-name="Chromium" data-number="24">
+                    <div class="text-xs">24</div>
+                    <div class="text-sm font-bold">Cr</div>
+                    <div class="text-xs">51.996</div>
+                </div>
+                <div class="element-tile bg-violet-500 text-white p-2 rounded-lg text-center" data-element="Mn" data-name="Manganese" data-number="25">
+                    <div class="text-xs">25</div>
+                    <div class="text-sm font-bold">Mn</div>
+                    <div class="text-xs">54.938</div>
+                </div>
+                <div class="element-tile bg-amber-600 text-white p-2 rounded-lg text-center" data-element="Fe" data-name="Iron" data-number="26">
+                    <div class="text-xs">26</div>
+                    <div class="text-sm font-bold">Fe</div>
+                    <div class="text-xs">55.845</div>
+                </div>
+                <div class="element-tile bg-blue-600 text-white p-2 rounded-lg text-center" data-element="Co" data-name="Cobalt" data-number="27">
+                    <div class="text-xs">27</div>
+                    <div class="text-sm font-bold">Co</div>
+                    <div class="text-xs">58.933</div>
+                </div>
+                <div class="element-tile bg-emerald-600 text-white p-2 rounded-lg text-center" data-element="Ni" data-name="Nickel" data-number="28">
+                    <div class="text-xs">28</div>
+                    <div class="text-sm font-bold">Ni</div>
+                    <div class="text-xs">58.693</div>
+                </div>
+                <div class="element-tile bg-orange-600 text-white p-2 rounded-lg text-center" data-element="Cu" data-name="Copper" data-number="29">
+                    <div class="text-xs">29</div>
+                    <div class="text-sm font-bold">Cu</div>
+                    <div class="text-xs">63.546</div>
+                </div>
+                <div class="element-tile bg-blue-700 text-white p-2 rounded-lg text-center" data-element="Zn" data-name="Zinc" data-number="30">
+                    <div class="text-xs">30</div>
+                    <div class="text-sm font-bold">Zn</div>
+                    <div class="text-xs">65.380</div>
+                </div>
+                <div class="element-tile bg-indigo-600 text-white p-2 rounded-lg text-center" data-element="Ga" data-name="Gallium" data-number="31">
+                    <div class="text-xs">31</div>
+                    <div class="text-sm font-bold">Ga</div>
+                    <div class="text-xs">69.723</div>
+                </div>
+                <div class="element-tile bg-gray-700 text-white p-2 rounded-lg text-center" data-element="Ge" data-name="Germanium" data-number="32">
+                    <div class="text-xs">32</div>
+                    <div class="text-sm font-bold">Ge</div>
+                    <div class="text-xs">72.630</div>
+                </div>
+                <div class="element-tile bg-green-700 text-white p-2 rounded-lg text-center" data-element="As" data-name="Arsenic" data-number="33">
+                    <div class="text-xs">33</div>
+                    <div class="text-sm font-bold">As</div>
+                    <div class="text-xs">74.922</div>
+                </div>
+                <div class="element-tile bg-red-700 text-white p-2 rounded-lg text-center" data-element="Se" data-name="Selenium" data-number="34">
+                    <div class="text-xs">34</div>
+                    <div class="text-sm font-bold">Se</div>
+                    <div class="text-xs">78.971</div>
+                </div>
+                <div class="element-tile bg-red-800 text-white p-2 rounded-lg text-center" data-element="Br" data-name="Bromine" data-number="35">
+                    <div class="text-xs">35</div>
+                    <div class="text-sm font-bold">Br</div>
+                    <div class="text-xs">79.904</div>
+                </div>
+                <div class="element-tile bg-purple-600 text-white p-2 rounded-lg text-center" data-element="Kr" data-name="Krypton" data-number="36">
+                    <div class="text-xs">36</div>
+                    <div class="text-sm font-bold">Kr</div>
+                    <div class="text-xs">83.798</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reaction Button -->
+        <div class="text-center mb-6">
+            <button id="react-btn" class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                ✅ SUBMIT ANSWER! 🎯
+            </button>
+        </div>
+
+        <!-- Animation Area -->
+        <div id="animation-area" class="text-center mb-6 h-32 flex items-center justify-center">
+            <div id="animation-content" class="text-6xl"></div>
+        </div>
+
+        <!-- Progress and Badges Panel -->
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white/20 backdrop-blur-sm rounded-xl p-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="text-xl font-bold text-white mb-3">📊 Your Progress</h4>
+                        <div class="bg-purple-600/30 rounded-lg p-4">
+                            <div class="flex justify-between text-white mb-2">
+                                <span>Correct Answers:</span>
+                                <span id="correct-answers">0</span>
+                            </div>
+                            <div class="flex justify-between text-white mb-2">
+                                <span>Wrong Answers:</span>
+                                <span id="wrong-answers">0</span>
+                            </div>
+                            <div class="flex justify-between text-white font-bold">
+                                <span>Accuracy:</span>
+                                <span id="accuracy">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-white mb-3">🏆 Your Badges</h4>
+                        <div id="badges-container" class="flex flex-wrap gap-2">
+                            <div class="badge px-3 py-1 rounded-full text-sm font-bold text-purple-800">🎯 Quiz Master</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reaction Card Modal -->
+    <div id="reaction-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="reaction-card rounded-2xl p-8 max-w-md mx-4 text-center">
+            <div id="reaction-emoji" class="text-6xl mb-4"></div>
+            <h3 id="reaction-title" class="text-2xl font-bold text-purple-800 mb-4"></h3>
+            <p id="reaction-description" class="text-purple-700 mb-6 leading-relaxed"></p>
+            <button id="close-modal" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full transition-colors">
+                🎉 Awesome! Continue Exploring
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ REPLACE THIS URL WITH YOUR GOOGLE APPS SCRIPT WEB APP URL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_kstr01_YoWfQKYcoQkG9G_vwAZ8CGaJ2fHJr5OnDfIrVw_IbqVgCLvq_ndeGVmxL/exec';
+        
+        let studentName = '';
+        let gameStartTime = '';
+        let selectedElements = [];
+        let score = 0;
+        let currentQuestionIndex = 0;
+        let correctAnswers = 0;
+        let wrongAnswers = 0;
+        let unlockedBadges = [];
+        
+        // Function to send progress data to Google Sheets
+        function sendProgressToBackend(progressData) {
+            const gameData = {
+                studentName: studentName,
+                gameStartTime: gameStartTime,
+                timestamp: new Date().toISOString(),
+                currentScore: score,
+                correctAnswers: correctAnswers,
+                wrongAnswers: wrongAnswers,
+                questionNumber: currentQuestionIndex + 1,
+                totalQuestions: questions.length,
+                unlockedBadges: unlockedBadges,
+                ...progressData
+            };
+            
+            // Send to Google Sheets
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(gameData)
+            })
+            .then(() => {
+                console.log('Data sent to Google Sheets:', gameData);
+            })
+            .catch(error => {
+                console.log('Error sending to Google Sheets:', error);
+            });
+        }
+        
+        const questions = [
+            {
+                question: "What two elements combine to form water?",
+                answer: ['H', 'O'],
+                reaction: {
+                    name: 'Water Formation',
+                    emoji: '💧',
+                    animation: '💥🌧️💧',
+                    description: 'Hydrogen and oxygen combine explosively to form water (H₂O) – the most important compound for life!'
+                }
+            },
+            {
+                question: "Which elements make table salt?",
+                answer: ['Na', 'Cl'],
+                reaction: {
+                    name: 'Salt Formation',
+                    emoji: '🧂',
+                    animation: '⚡💨🧂',
+                    description: 'Sodium and chlorine react to make sodium chloride (NaCl), also known as table salt!'
+                }
+            },
+            {
+                question: "What elements create carbon dioxide?",
+                answer: ['C', 'O'],
+                reaction: {
+                    name: 'Carbon Dioxide',
+                    emoji: '🫧',
+                    animation: '🔥💨🫧',
+                    description: 'Carbon reacts with oxygen to form carbon dioxide (CO₂) – essential for plants but harmful in excess!'
+                }
+            },
+            {
+                question: "Which elements cause iron to rust?",
+                answer: ['Fe', 'O'],
+                reaction: {
+                    name: 'Rust Formation',
+                    emoji: '🦀',
+                    animation: '🧱⚡🦀',
+                    description: 'Iron reacts with oxygen to form rust (iron oxide) – that reddish-brown coating on old metal!'
+                }
+            },
+            {
+                question: "What elements form hydrochloric acid?",
+                answer: ['H', 'Cl'],
+                reaction: {
+                    name: 'Hydrochloric Acid',
+                    emoji: '🧪',
+                    animation: '💥🌪️🧪',
+                    description: 'Hydrogen and chlorine form hydrochloric acid (HCl) – found in your stomach for digestion!'
+                }
+            },
+            {
+                question: "Which elements combine to make ammonia?",
+                answer: ['N', 'H'],
+                reaction: {
+                    name: 'Ammonia Formation',
+                    emoji: '🌱',
+                    animation: '⚡🌿🌱',
+                    description: 'Nitrogen and hydrogen form ammonia (NH₃) – essential for fertilizers that feed the world!'
+                }
+            },
+            {
+                question: "What elements form methane?",
+                answer: ['C', 'H'],
+                reaction: {
+                    name: 'Methane Formation',
+                    emoji: '🔥',
+                    animation: '💨🔥💥',
+                    description: 'Carbon and hydrogen form methane (CH₄) – the main component of natural gas!'
+                }
+            },
+            {
+                question: "Which elements make hydrogen peroxide?",
+                answer: ['H', 'O'],
+                reaction: {
+                    name: 'Hydrogen Peroxide',
+                    emoji: '🧴',
+                    animation: '✨💫🧴',
+                    description: 'Hydrogen and oxygen form hydrogen peroxide (H₂O₂) – used for cleaning wounds and bleaching!'
+                }
+            },
+            {
+                question: "What elements form calcium oxide?",
+                answer: ['Ca', 'O'],
+                reaction: {
+                    name: 'Calcium Oxide (Lime)',
+                    emoji: '🏗️',
+                    animation: '🔥⚡🏗️',
+                    description: 'Calcium and oxygen form calcium oxide (CaO) – used in cement and construction!'
+                }
+            },
+            {
+                question: "Which elements create sulfur dioxide?",
+                answer: ['S', 'O'],
+                reaction: {
+                    name: 'Sulfur Dioxide',
+                    emoji: '🌋',
+                    animation: '💨🌋☁️',
+                    description: 'Sulfur and oxygen form sulfur dioxide (SO₂) – causes acid rain but preserves wine!'
+                }
+            },
+            {
+                question: "Which elements make calcium carbonate?",
+                answer: ['Ca', 'C', 'O'],
+                reaction: {
+                    name: 'Calcium Carbonate',
+                    emoji: '🏔️',
+                    animation: '⚡🏔️✨',
+                    description: 'Calcium, carbon, and oxygen form calcium carbonate (CaCO₃) – found in limestone and seashells!'
+                }
+            },
+            {
+                question: "What elements form sulfuric acid?",
+                answer: ['H', 'S', 'O'],
+                reaction: {
+                    name: 'Sulfuric Acid',
+                    emoji: '⚗️',
+                    animation: '💥⚗️🌪️',
+                    description: 'Hydrogen, sulfur, and oxygen form sulfuric acid (H₂SO₄) – the most produced chemical worldwide!'
+                }
+            },
+            {
+                question: "Which elements make glucose?",
+                answer: ['C', 'H', 'O'],
+                reaction: {
+                    name: 'Glucose Formation',
+                    emoji: '🍯',
+                    animation: '🌞🍯✨',
+                    description: 'Carbon, hydrogen, and oxygen form glucose (C₆H₁₂O₆) – the primary energy source for living cells!'
+                }
+            },
+            {
+                question: "What elements are in baking soda?",
+                answer: ['Na', 'H', 'C', 'O'],
+                reaction: {
+                    name: 'Sodium Bicarbonate',
+                    emoji: '🧁',
+                    animation: '✨🧁💫',
+                    description: 'Sodium, hydrogen, carbon, and oxygen form baking soda (NaHCO₃) – makes cakes fluffy and extinguishes fires!'
+                }
+            },
+            {
+                question: "Which elements form nitric acid?",
+                answer: ['H', 'N', 'O'],
+                reaction: {
+                    name: 'Nitric Acid',
+                    emoji: '💥',
+                    animation: '⚡💥🌪️',
+                    description: 'Hydrogen, nitrogen, and oxygen form nitric acid (HNO₃) – used to make explosives and fertilizers!'
+                }
+            }
+        ];
+        
+        // Welcome screen functionality
+        const studentNameInput = document.getElementById('student-name');
+        const startGameBtn = document.getElementById('start-game-btn');
+        
+        studentNameInput.addEventListener('input', function() {
+            const name = this.value.trim();
+            startGameBtn.disabled = name.length < 2;
+            
+            if (name.length >= 2) {
+                startGameBtn.textContent = `🚀 START ${name.toUpperCase()}'S ADVENTURE! 🎯`;
+            } else {
+                startGameBtn.textContent = '🚀 START MY CHEMISTRY ADVENTURE! 🎯';
+            }
+        });
+        
+        studentNameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !startGameBtn.disabled) {
+                startGame();
+            }
+        });
+        
+        startGameBtn.addEventListener('click', startGame);
+        
+        function startGame() {
+            studentName = studentNameInput.value.trim();
+            gameStartTime = new Date().toISOString();
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('studentName', studentName);
+            localStorage.setItem('gameStartTime', gameStartTime);
+            
+            // Hide welcome screen and show game
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            // Initialize game
+            initializeGame();
+        }
+        
+        // Initialize game
+        function initializeGame() {
+            // Display personalized title
+            document.getElementById('game-title').innerHTML = `🧪 ${studentName.toUpperCase()}'S CHEMISTRY LAB 💥`;
+            
+            loadQuestion();
+            updateProgress();
+            
+            // Send game initialization to Google Sheets
+            sendProgressToBackend({
+                action: 'game_initialized',
+                questionNumber: 1,
+                totalQuestions: questions.length
+            });
+        }
+        
+        function loadQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const question = questions[currentQuestionIndex];
+                document.getElementById('current-question').textContent = question.question;
+                document.getElementById('question-number').textContent = currentQuestionIndex + 1;
+            } else {
+                // Game completed
+                showGameComplete();
+            }
+        }
+        
+        // Element selection
+        document.querySelectorAll('.element-tile').forEach(tile => {
+            tile.addEventListener('click', function() {
+                const element = this.dataset.element;
+                
+                if (selectedElements.includes(element)) {
+                    // Deselect
+                    selectedElements = selectedElements.filter(e => e !== element);
+                    this.classList.remove('element-selected');
+                } else if (selectedElements.length < 4) {
+                    // Select (increased to 4 for complex compounds)
+                    selectedElements.push(element);
+                    this.classList.add('element-selected');
+                }
+                
+                updateSelectedDisplay();
+                updateSubmitButton();
+            });
+        });
+        
+        function updateSelectedDisplay() {
+            const display = document.getElementById('selected-display');
+            if (selectedElements.length === 0) {
+                display.textContent = 'Select elements to answer!';
+            } else {
+                display.textContent = selectedElements.join(' + ');
+            }
+        }
+        
+        function updateSubmitButton() {
+            const btn = document.getElementById('react-btn');
+            btn.disabled = selectedElements.length < 2;
+        }
+        
+        // Submit answer button
+        document.getElementById('react-btn').addEventListener('click', function() {
+            if (selectedElements.length >= 2) {
+                checkAnswer();
+            }
+        });
+        
+        function checkAnswer() {
+            const currentQuestion = questions[currentQuestionIndex];
+            const userAnswer = selectedElements.sort();
+            const correctAnswer = currentQuestion.answer.sort();
+            
+            const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(correctAnswer);
+            
+            if (isCorrect) {
+                // Correct answer
+                correctAnswers++;
+                updateScore(100);
+                showAnimation(currentQuestion.reaction.animation);
+                
+                // Send correct answer to Google Sheets
+                sendProgressToBackend({
+                    action: 'question_answered',
+                    questionNumber: currentQuestionIndex + 1,
+                    userAnswer: userAnswer,
+                    correctAnswer: correctAnswer,
+                    isCorrect: true,
+                    pointsEarned: 100,
+                    reactionName: currentQuestion.reaction.name
+                });
+                
+                setTimeout(() => {
+                    showReactionCard({
+                        ...currentQuestion.reaction,
+                        name: '🎉 Correct! ' + currentQuestion.reaction.name,
+                        description: '✅ ' + currentQuestion.reaction.description
+                    });
+                    checkForBadges();
+                }, 2000);
+            } else {
+                // Wrong answer
+                wrongAnswers++;
+                updateScore(-20);
+                showAnimation('❌💨😞');
+                
+                // Send wrong answer to Google Sheets
+                sendProgressToBackend({
+                    action: 'question_answered',
+                    questionNumber: currentQuestionIndex + 1,
+                    userAnswer: userAnswer,
+                    correctAnswer: correctAnswer,
+                    isCorrect: false,
+                    pointsLost: 20,
+                    reactionName: currentQuestion.reaction.name
+                });
+                
+                setTimeout(() => {
+                    showReactionCard({
+                        emoji: '❌',
+                        name: 'Not Quite Right!',
+                        description: `The correct answer was ${correctAnswer.join(' + ')}. ${currentQuestion.reaction.description}`
+                    });
+                }, 2000);
+            }
+            
+            // Clear selection and move to next question
+            setTimeout(() => {
+                nextQuestion();
+            }, 4000);
+        }
+        
+        function nextQuestion() {
+            currentQuestionIndex++;
+            selectedElements = [];
+            document.querySelectorAll('.element-selected').forEach(el => {
+                el.classList.remove('element-selected');
+            });
+            updateSelectedDisplay();
+            updateSubmitButton();
+            updateProgress();
+            loadQuestion();
+        }
+        
+        function showAnimation(animationText) {
+            const content = document.getElementById('animation-content');
+            const chars = animationText.split('');
+            let index = 0;
+            
+            const interval = setInterval(() => {
+                if (index < chars.length) {
+                    content.textContent = chars.slice(0, index + 1).join('');
+                    index++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 300);
+        }
+        
+        function showReactionCard(reaction) {
+            document.getElementById('reaction-emoji').textContent = reaction.emoji;
+            document.getElementById('reaction-title').textContent = reaction.name;
+            document.getElementById('reaction-description').textContent = reaction.description;
+            document.getElementById('reaction-modal').classList.remove('hidden');
+            document.getElementById('reaction-modal').classList.add('flex');
+        }
+        
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('reaction-modal').classList.add('hidden');
+            document.getElementById('reaction-modal').classList.remove('flex');
+            document.getElementById('animation-content').textContent = '';
+        });
+        
+        function updateScore(points) {
+            score += points;
+            if (score < 0) score = 0; // Don't go below 0
+            document.getElementById('score').textContent = score;
+        }
+        
+        function updateProgress() {
+            document.getElementById('correct-answers').textContent = correctAnswers;
+            document.getElementById('wrong-answers').textContent = wrongAnswers;
+            
+            const total = correctAnswers + wrongAnswers;
+            const accuracy = total > 0 ? Math.round((correctAnswers / total) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            
+            document.getElementById('reactions-count').textContent = `${currentQuestionIndex}/${questions.length}`;
+        }
+        
+        function checkForBadges() {
+            const badges = [
+                { condition: correctAnswers >= 1, text: '🎯 First Success', id: 'first' },
+                { condition: correctAnswers >= 3, text: '🔥 On Fire', id: 'fire' },
+                { condition: correctAnswers >= 5, text: '⭐ Chemistry Star', id: 'star' },
+                { condition: correctAnswers >= 10, text: '🏆 Chemistry Master', id: 'master' },
+                { condition: correctAnswers > 0 && wrongAnswers === 0, text: '💯 Perfect Score', id: 'perfect' },
+                { condition: (correctAnswers / (correctAnswers + wrongAnswers)) >= 0.8, text: '🎖️ Accuracy Award', id: 'accuracy' }
+            ];
+            
+            badges.forEach(badge => {
+                if (badge.condition && !unlockedBadges.includes(badge.id)) {
+                    addBadge(badge.text, badge.id);
+                }
+            });
+        }
+        
+        function addBadge(badgeText, badgeId) {
+            unlockedBadges.push(badgeId);
+            const badgesContainer = document.getElementById('badges-container');
+            const badge = document.createElement('div');
+            badge.className = 'badge px-3 py-1 rounded-full text-sm font-bold text-purple-800 animate-pulse';
+            badge.textContent = badgeText;
+            badgesContainer.appendChild(badge);
+            
+            // Send badge unlock to Google Sheets
+            sendProgressToBackend({
+                action: 'badge_unlocked',
+                badgeId: badgeId,
+                badgeName: badgeText
+            });
+            
+            // Remove pulse after animation
+            setTimeout(() => {
+                badge.classList.remove('animate-pulse');
+            }, 2000);
+        }
+        
+        function showGameComplete() {
+            const accuracy = Math.round((correctAnswers / questions.length) * 100);
+            let message = '';
+            let emoji = '';
+            
+            if (accuracy >= 90) {
+                message = 'Outstanding! You\'re a Chemistry Genius!';
+                emoji = '🏆';
+            } else if (accuracy >= 75) {
+                message = 'Excellent work! You really know your chemistry!';
+                emoji = '🥇';
+            } else if (accuracy >= 60) {
+                message = 'Good job! Keep studying to become a chemistry expert!';
+                emoji = '🥈';
+            } else {
+                message = 'Nice try! Practice more to improve your chemistry skills!';
+                emoji = '🥉';
+            }
+            
+            // Send game completion to Google Sheets
+            sendProgressToBackend({
+                action: 'game_completed',
+                finalScore: score,
+                finalAccuracy: accuracy,
+                completionTime: new Date().toISOString(),
+                totalTimeSpent: Math.round((new Date() - new Date(gameStartTime)) / 1000 / 60), // minutes
+                performance: accuracy >= 90 ? 'Excellent' : accuracy >= 75 ? 'Good' : accuracy >= 60 ? 'Fair' : 'Needs Improvement'
+            });
+            
+            showReactionCard({
+                emoji: emoji,
+                name: `Congratulations ${studentName}!`,
+                description: `${message} Final Score: ${correctAnswers}/${questions.length} correct (${accuracy}% accuracy)`
+            });
+        }
+        
+        // Add sparkle effects
+        setInterval(() => {
+            const sparkles = ['✨', '⭐', '💫', '🌟'];
+            const sparkle = document.createElement('div');
+            sparkle.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+            sparkle.className = 'fixed text-2xl sparkle pointer-events-none';
+            sparkle.style.left = Math.random() * window.innerWidth + 'px';
+            sparkle.style.top = Math.random() * window.innerHeight + 'px';
+            document.body.appendChild(sparkle);
+            
+            setTimeout(() => {
+                sparkle.remove();
+            }, 2000);
+        }, 3000);
+        
+        // Auto-focus on name input when page loads
+        window.addEventListener('load', () => {
+            studentNameInput.focus();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'971919af34191c69',t:'MTc1NTYwMDczNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
